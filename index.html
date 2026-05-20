@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flyttegods Label Maskine</title>
+  <meta name="theme-color" content="#1b3a6b" />
+  <meta name="app-manifest" content="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <style>
+    /* ── Reset & base ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    /* ── Header ───────────────────────────────────────────── */
+    header {
+      background: #1b3a6b;
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    header h1 { font-size: 1.5rem; letter-spacing: .5px; }
+    header span { font-size: .9rem; opacity: .75; margin-left: auto; }
+
+    /* ── Input panel ──────────────────────────────────────── */
+    .panel {
+      background: #fff;
+      border-radius: 10px;
+      padding: 28px 32px;
+      margin: 28px auto;
+      max-width: 680px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.10);
+    }
+    .panel h2 { font-size: 1.1rem; margin-bottom: 20px; color: #1b3a6b; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 24px;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    label { display: block; font-size: .8rem; font-weight: 700; margin-bottom: 5px; color: #444; text-transform: uppercase; letter-spacing: .4px; }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #ccd2dc;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-family: Arial, sans-serif;
+      transition: border-color .2s;
+    }
+    input:focus { outline: none; border-color: #1b3a6b; }
+
+    .btn-row { display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap; }
+
+    button {
+      padding: 11px 26px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: Arial, sans-serif;
+      transition: filter .15s, transform .1s;
+    }
+    button:active { transform: scale(.97); }
+
+    #btn-generate { background: #1b3a6b; color: #fff; }
+    #btn-generate:hover { filter: brightness(1.15); }
+
+    #btn-print { background: #2e7d32; color: #fff; }
+    #btn-print:hover { filter: brightness(1.12); }
+    #btn-print:disabled { background: #aaa; cursor: not-allowed; }
+
+    #btn-pdf { background: #005fa3; color: #fff; }
+    #btn-pdf:hover { filter: brightness(1.12); }
+    #btn-pdf:disabled { background: #aaa; cursor: not-allowed; }
+
+    #btn-clear { background: #eee; color: #555; }
+    #btn-clear:hover { background: #ddd; }
+
+    /* PWA install gate */
+    #pwa-install-gate {
+      position: fixed;
+      inset: 0;
+      background: rgba(12, 19, 32, 0.82);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #pwa-install-gate.show { display: flex; }
+    .pwa-card {
+      width: min(560px, 95vw);
+      background: #ffffff;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
+    }
+    .pwa-card h3 {
+      font-size: 1.15rem;
+      margin-bottom: 8px;
+      color: #1b3a6b;
+    }
+    .pwa-card p {
+      font-size: 0.96rem;
+      color: #333;
+      line-height: 1.4;
+      margin-bottom: 14px;
+    }
+    .pwa-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    #btn-install-pwa {
+      background: #1b3a6b;
+      color: #fff;
+    }
+    #btn-install-pwa:hover { filter: brightness(1.1); }
+    #btn-install-help {
+      background: #e8edf5;
+      color: #21324e;
+    }
+    #btn-install-help:hover { filter: brightness(0.97); }
+
+    body.standalone #pwa-install-gate { display: none !important; }
+
+    /* ── Label grid (screen) ──────────────────────────────── */
+    #label-area {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto 48px;
+      padding: 0 28px;
+    }
+
+    /* ── Single label ─────────────────────────────────────── */
+    .label {
+      width: 100%;
+      aspect-ratio: 15 / 10;          /* 15cm wide × 10cm tall */
+      border: 2.5px solid #111;
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Label header with logo and address */
+    .label-header {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 12px;
+      padding: 8px 12px 6px;
+      border-bottom: 1px solid #222;
+      background: #fff;
+    }
+    .label-header-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-width: 0;
+      flex: 1;
+    }
+    .label-logo {
+      display: block;
+      width: 140px;
+      height: auto;
+      object-fit: contain;
+      flex: 0 0 auto;
+    }
+    .label-booking-header {
+      font-size: 1.8rem;
+      font-weight: 900;
+      line-height: 1.1;
+      color: #111;
+      text-transform: uppercase;
+      letter-spacing: .2px;
+      text-align: center;
+      margin-top: 4px;
+      margin-bottom: 4px;
+      width: 100%;
+    }
+    .label-address {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      text-align: right;
+      font-size: .95rem;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #222;
+    }
+    .label-address .street,
+    .label-address .phone {
+      display: block;
+      white-space: nowrap;
+    }
+    .label-address .street {
+      margin-bottom: 2px;
+    }
+
+    /* Coloured destination top-bar */
+    .label-topbar {
+      position: relative;
+      z-index: 1;
+      height: 32px;
+      min-height: 32px;
+      background: var(--dest-color, #b71c1c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .label-topbar span {
+      color: #fff;
+      font-weight: 900;
+      font-size: .95rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    /* Label body */
+    .label-body {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 18px 14px 8px;
+      gap: 2px;
+    }
+
+    .label-name {
+      font-size: 1.35rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      line-height: 1.1;
+      margin-bottom: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .label-row {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #222;
+      display: flex;
+      gap: 6px;
+      line-height: 1.05;
+      border-bottom: 1px solid #222;
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+    }
+    .label-row .lbl { color: #555; font-weight: 400; min-width: 122px; }
+    .label-row.booking-row { font-size: 1rem; font-weight: 700; color: #111; }
+    .label-row.booking-row .lbl,
+    .label-row.booking-row span:last-child { font-weight: 700; color: #111; }
+
+    /* Big box number at bottom — editable */
+    .label-boxnum {
+      margin-top: auto;
+      padding-top: 4px;
+      padding-bottom: 6px;
+      text-align: center;
+      font-size: 1.4rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      line-height: 1;
+      color: #111;
+      cursor: text;
+      border-radius: 0;
+      transition: background .15s;
+      min-height: 2.5rem;
+    }
+    .label-boxnum:focus {
+      outline: 2px dashed #1b3a6b;
+      background: rgba(27,58,107,.06);
+    }
+    .label-boxnum:empty::before {
+      content: 'SKRIV KASSENO.';
+      color: #bbb;
+      font-size: 1.4rem;
+      letter-spacing: 1px;
+    }
+
+    /* ── Destination colour map ───────────────────────────── */
+    /* Colours assigned dynamically in JS */
+
+    /* ── Empty state ──────────────────────────────────────── */
+    #empty-msg {
+      text-align: center;
+      color: #999;
+      font-size: 1rem;
+      padding: 48px 0 80px;
+    }
+
+    /* Keep old cached button hidden if it still exists in stale markup */
+    #btn-generate { display: none !important; }
+
+    /* Compact app view: labels are generated off-screen for print/PDF only */
+    #label-area {
+      position: absolute;
+      left: -200vw;
+      top: 0;
+      width: 210mm;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6mm;
+      padding: 0;
+      margin: 0;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       PRINT STYLES
+    ══════════════════════════════════════════════════════ */
+    @media print {
+      @page { size: A4 portrait; margin: 10mm; }
+
+      body * { visibility: hidden; }
+
+      #label-area,
+      #label-area * { visibility: visible; }
+
+      #label-area {
+        position: absolute;
+        top: 0; left: 0;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6mm;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+      }
+
+      .label {
+        width: 100%;
+        aspect-ratio: 15 / 10;
+        border: 2pt solid #111;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .label-header { padding: 6px 10px 4px; }
+      .label-logo { width: 88px; }
+      .label-header-left { padding-bottom: 6px; }
+      .label-booking-header { font-size: 1.3rem; margin-top: 3px; margin-bottom: 3px; padding-bottom: 4px; }
+      .label-address { font-size: .72rem; }
+      .label-topbar { height: 22px; min-height: 22px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .label-topbar span { font-size: .7rem; }
+      .label-name { font-size: 1rem; }
+      .label-row { font-size: .82rem; padding-bottom: 2px; margin-bottom: 2px; }
+      .label-boxnum { font-size: 1.1rem; }
+      .label-bg { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>&#128230; Flyttegods Label Maskine</h1>
+  </div>
+  <span>Usisaat Shipping</span>
+</header>
+
+<div id="pwa-install-gate" aria-live="polite">
+  <div class="pwa-card">
+    <h3>Installer Label Maskine som app</h3>
+    <p>Denne løsning er lavet til PWA arbejdsskærm. Installer appen og åbn den derefter fra Start-menuen for fuldskærm uden browser-felter.</p>
+    <div class="pwa-actions">
+      <button id="btn-install-pwa" type="button">Installer app</button>
+      <button id="btn-install-help" type="button">Vis trin</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Input panel ── -->
+<div class="panel" id="input-panel">
+  <h2>Udfyld oplysninger</h2>
+  <div class="form-grid">
+
+    <div>
+      <label for="inp-navn">Navn</label>
+      <input type="text" id="inp-navn" placeholder="Fulde navn" />
+    </div>
+
+    <div>
+      <label for="inp-rekv">Rekvisitionsnummer</label>
+      <input type="text" id="inp-rekv" placeholder="REK-XXXX" />
+    </div>
+
+    <div>
+      <label for="inp-book">Bookingnummer</label>
+      <input type="text" id="inp-book" placeholder="BK-XXXXXXXX" />
+    </div>
+
+    <div>
+      <label for="inp-dest">Destination</label>
+      <input type="text" id="inp-dest" placeholder="fx Nuuk, Sisimiut …" />
+    </div>
+
+    <div class="full">
+      <label for="inp-antal">Antal kasser <span style="font-weight:400;text-transform:none;color:#888">(valgfrit — lad stå tomt for at skrive kasseno. selv)</span></label>
+      <input type="number" id="inp-antal" placeholder="fx 5 — eller lad stå tomt" min="1" max="100" />
+    </div>
+
+  </div>
+
+  <div class="btn-row">
+    <button id="btn-print">&#128424; Udskriv alle</button>
+    <button id="btn-pdf">&#128196; Download PDF</button>
+    <button id="btn-clear">&#10005; Ryd</button>
+  </div>
+</div>
+
+<!-- ── Label output area ── -->
+<div id="label-area"></div>
+
+<script src="html2canvas.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
+<script>
+  let deferredPwaPrompt = null;
+
+  function isHttpOrigin() {
+    return location.protocol === 'http:' || location.protocol === 'https:';
+  }
+
+  function ensureManifestLink() {
+    if (!isHttpOrigin()) return;
+    if (document.querySelector('link[rel="manifest"]')) return;
+
+    const href = document.querySelector('meta[name="app-manifest"]')?.getAttribute('content') || 'manifest.webmanifest';
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = href;
+    document.head.appendChild(manifestLink);
+  }
+
+  function isStandaloneApp() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+
+  function showInstallGate() {
+    const gate = document.getElementById('pwa-install-gate');
+    if (gate) gate.classList.add('show');
+  }
+
+  function hideInstallGate() {
+    const gate = document.getElementById('pwa-install-gate');
+    if (gate) gate.classList.remove('show');
+  }
+
+  async function registerServiceWorkerWithAutoUpdate() {
+    if (!isHttpOrigin() || !window.isSecureContext || !('serviceWorker' in navigator)) return;
+
+    let isRefreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (isRefreshing) return;
+      isRefreshing = true;
+      window.location.reload();
+    });
+
+    try {
+      const registration = await navigator.serviceWorker.register('./sw.js');
+
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (!newWorker) return;
+
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            newWorker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+
+      await registration.update();
+      setInterval(() => {
+        registration.update().catch(() => {});
+      }, 5 * 60 * 1000);
+    } catch (err) {
+      console.error('Service worker fejl:', err);
+    }
+  }
+
+  async function setupPwa() {
+    ensureManifestLink();
+
+    if (location.protocol === 'file:') {
+      alert('Du har aabnet appen som fil (file://), og PWA virker derfor ikke. Brug start-label-maskine.cmd eller aabn appen via http://localhost:5173/index.html.');
+      return;
+    }
+
+    await registerServiceWorkerWithAutoUpdate();
+
+    if (isStandaloneApp()) {
+      document.body.classList.add('standalone');
+      hideInstallGate();
+      return;
+    }
+
+    const installBtn = document.getElementById('btn-install-pwa');
+    const helpBtn = document.getElementById('btn-install-help');
+
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (!deferredPwaPrompt) {
+          alert('Installationsprompt er ikke klar endnu. Tryk på "Vis trin".');
+          return;
+        }
+
+        deferredPwaPrompt.prompt();
+        await deferredPwaPrompt.userChoice;
+        deferredPwaPrompt = null;
+      });
+    }
+
+    if (helpBtn) {
+      helpBtn.addEventListener('click', () => {
+        alert('Edge: klik på menuen (...) > Apps > Installer denne side som en app. Åbn derefter appen fra Start-menuen.');
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredPwaPrompt = event;
+      showInstallGate();
+    });
+
+    window.addEventListener('appinstalled', () => {
+      hideInstallGate();
+      deferredPwaPrompt = null;
+      alert('App installeret. Åbn den nu fra Start-menuen.');
+    });
+
+  }
+
+  setupPwa();
+
+  /* ── Destination → colour mapping ─────────────────────── */
+  const DEST_COLORS = [
+    { keys: ['nuuk','godthåb','godthab'],   color: '#b71c1c' },   // deep red
+    { keys: ['sisimiut','holsteinsborg'],   color: '#1565c0' },   // blue
+    { keys: ['ilulissat','jakobshavn'],     color: '#2e7d32' },   // green
+    { keys: ['qaqortoq','julianehåb'],     color: '#6a1a9a' },   // purple
+    { keys: ['aasiaat','egedesminde'],      color: '#e65100' },   // orange
+    { keys: ['maniitsoq','sukkertoppen'],   color: '#5b9bd5' },   // light blue
+    { keys: ['tasiilaq','ammassalik'],      color: '#37474f' },   // dark grey
+    { keys: ['kangerlussuaq','søndre strømfjord'], color: '#4527a0' }, // indigo
+    { keys: ['paamiut','frederikshåb'],     color: '#558b2f' },   // olive
+    { keys: ['uummannaq'],                  color: '#c62828' },   // crimson
+    { keys: ['upernavik'],                  color: '#0277bd' },   // sky blue
+    { keys: ['narsaq'],                     color: '#ad1457' },   // pink
+  ];
+
+  const FALLBACK_COLOR = '#37474f';
+
+  function destColor(destination) {
+    if (!destination) return FALLBACK_COLOR;
+    const lower = destination.toLowerCase().trim();
+    for (const entry of DEST_COLORS) {
+      if (entry.keys.some(k => lower.includes(k))) return entry.color;
+    }
+    /* Hash the string to a consistent colour for unknown destinations */
+    let hash = 0;
+    for (let i = 0; i < lower.length; i++) hash = lower.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 55%, 35%)`;
+  }
+
+  /* ── Logo path (same folder as HTML file) ─────────────── */
+  const LOGO_PATH = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/4QMGRXhpZgAATU0AKgAAAAgABAEOAAIAAAAUAAABSodpAAQAAAABAAABXpybAAEAAAAoAAAC1uocAAcAAAEMAAAAPgAAAAAc6gAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATnlfdXNpc2FhdF9SR0JfbG9nbwAABZADAAIAAAAUAAACrJAEAAIAAAAUAAACwJKRAAIAAAADMDAAAJKSAAIAAAADMDAAAOocAAcAAAEMAAABoAAAAAAc6gAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMjAyNjowMzoxOSAwODo0MzoxNgAyMDI2OjAzOjE5IDA4OjQzOjE2AAAATgB5AF8AdQBzAGkAcwBhAGEAdABfAFIARwBCAF8AbABvAGcAbwAAAP/hBP5odHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvADw/eHBhY2tldCBiZWdpbj0n77u/JyBpZD0nVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkJz8+DQo8eDp4bXBtZXRhIHhtbG5zOng9ImFkb2JlOm5zOm1ldGEvIj48cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPjxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSJ1dWlkOmZhZjViZGQ1LWJhM2QtMTFkYS1hZDMxLWQzM2Q3NTE4MmYxYiIgeG1sbnM6ZXhpZj0iaHR0cDovL25zLmFkb2JlLmNvbS9leGlmLzEuMC8iPjxleGlmOkRhdGVUaW1lT3JpZ2luYWw+MjAyNi0wMy0xOVQwODo0MzoxNjwvZXhpZjpEYXRlVGltZU9yaWdpbmFsPjwvcmRmOkRlc2NyaXB0aW9uPjxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSJ1dWlkOmZhZjViZGQ1LWJhM2QtMTFkYS1hZDMxLWQzM2Q3NTE4MmYxYiIgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIj48ZGM6dGl0bGU+PHJkZjpBbHQgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj48cmRmOmxpIHhtbDpsYW5nPSJ4LWRlZmF1bHQiPk55X3VzaXNhYXRfUkdCX2xvZ288L3JkZjpsaT48L3JkZjpBbHQ+DQoJCQk8L2RjOnRpdGxlPjwvcmRmOkRlc2NyaXB0aW9uPjxyZGY6RGVzY3JpcHRpb24gcmRmOmFib3V0PSJ1dWlkOmZhZjViZGQ1LWJhM2QtMTFkYS1hZDMxLWQzM2Q3NTE4MmYxYiIgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIj48ZGM6ZGVzY3JpcHRpb24+PHJkZjpBbHQgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj48cmRmOmxpIHhtbDpsYW5nPSJ4LWRlZmF1bHQiPk55X3VzaXNhYXRfUkdCX2xvZ288L3JkZjpsaT48L3JkZjpBbHQ+DQoJCQk8L2RjOmRlc2NyaXB0aW9uPjwvcmRmOkRlc2NyaXB0aW9uPjwvcmRmOlJERj48L3g6eG1wbWV0YT4NCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA8P3hwYWNrZXQgZW5kPSd3Jz8+/9sAQwADAgIDAgIDAwMDBAMDBAUIBQUEBAUKBwcGCAwKDAwLCgsLDQ4SEA0OEQ4LCxAWEBETFBUVFQwPFxgWFBgSFBUU/9sAQwEDBAQFBAUJBQUJFA0LDRQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU/8AAEQgBCAIeAwEiAAIRAQMRAf/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/EAB8BAAMBAQEBAQEBAQEAAAAAAAABAgMEBQYHCAkKC//EALURAAIBAgQEAwQHBQQEAAECdwABAgMRBAUhMQYSQVEHYXETIjKBCBRCkaGxwQkjM1LwFWJy0QoWJDThJfEXGBkaJicoKSo1Njc4OTpDREVGR0hJSlNUVVZXWFlaY2RlZmdoaWpzdHV2d3h5eoKDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uLj5OXm5+jp6vLz9PX29/j5+v/aAAwDAQACEQMRAD8A/VOiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKqXer2Onki6vbe2IGSJpVTj15NWiQBknA96ypY9CvZWjkXT55GPzI4jYk+4pNlxSb1Ix428OkEjXtMIHX/TI+P/AB6lg8aeHrmURw69pksh6Il5GxP4A1Tv/hp4Q1ZcXnhfRrtf+mtjE381rmdU/Zu+GurjE3hKxj97bdD/AOgEVlJ1fspf18jupRwT/iykvRJ/+3I9HS4ikxtlRs+jA0/rXgOt/sTfD3Ux/obarpDDp9mu94/KQNXCan+w/rOjStceFvGzxSD7sc8bwN/38jY/yrklXxMf+XN/SX/APZw+X5PX0eOcH/epv81Jn11RXwX4l+HP7QXgxJHGqeJb+3T7sulavLOP++A4b/x2udsP2n/ir4VnWzuNfuHNsdr2uo2cUjn/AHmZd/61xTzeFH+PTlH5H0NHgetjY82AxdKp82v0Z+i1FfFOgft4eIraQf214c0u/ixgGylktmJ9fnLg/kK9R8L/ALbfgXWREmq2+o6FKw+ZpYfOiU+m5Mt+aiuqnmeEq7TS9dDxsXwfneDXNPDuS7xtL8Fr+B9C0VznhT4jeF/HEQfQdesNTJXcY4JgZFH+0h+ZfxAro69JSUleLufI1Kc6UnCpFp9nowoooqjMKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKK434lfFvw18KNKF5r195cjgmCzhAeef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';
+
+  /* ── Helpers ──────────────────────────────────────────── */
+  function val(id) { return document.getElementById(id).value.trim(); }
+
+  function safeFilenamePart(text) {
+    const cleaned = (text || '').trim().replace(/[\\/:*?"<>|]/g, '-');
+    return cleaned || 'uden-booking';
+  }
+
+  async function exportLabelsToPdf() {
+    if (typeof html2canvas !== 'function' || !window.jspdf || !window.jspdf.jsPDF) {
+      alert('PDF-biblioteker blev ikke indlæst. Genindlæs siden og prøv igen.');
+      return false;
+    }
+
+    const labels = Array.from(document.querySelectorAll('.label'));
+    if (!labels.length) {
+      alert('Der er ingen labels at eksportere.');
+      return false;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const pageW = 210;
+    const pageH = 297;
+    const margin = 10;
+    const gapX = 6;
+    const gapY = 8;
+    const cols = 2;
+    const cellW = (pageW - margin * 2 - gapX) / cols;
+    const cellH = cellW * (10 / 15);
+    const rows = Math.floor((pageH - margin * 2 + gapY) / (cellH + gapY));
+    const perPage = Math.max(1, cols * rows);
+
+    for (let i = 0; i < labels.length; i++) {
+      if (i > 0 && i % perPage === 0) {
+        pdf.addPage();
+      }
+
+      const positionIndex = i % perPage;
+      const row = Math.floor(positionIndex / cols);
+      const col = positionIndex % cols;
+      const x = margin + col * (cellW + gapX);
+      const y = margin + row * (cellH + gapY);
+
+      const canvas = await html2canvas(labels[i], {
+        scale: 2,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: false
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage(imgData, 'PNG', x, y, cellW, cellH);
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const booking = safeFilenamePart(val('inp-book'));
+    const filename = `labels-${booking}-${today}.pdf`;
+    pdf.save(filename);
+    return true;
+  }
+
+  function buildLabel(navn, rekv, book, dest, kassNr, kassTotal, color) {
+    const div = document.createElement('div');
+    div.className = 'label';
+
+    div.innerHTML = `
+      <div class="label-topbar" style="background:${color}">
+        <span>${dest || 'DESTINATION UKENDT'}</span>
+      </div>
+
+      <div class="label-header">
+        <div class="label-header-left">
+          <img class="label-logo" src="${LOGO_PATH}" alt="Usisaat logo" />
+          <div class="label-booking-header">${book || '—'}</div>
+        </div>
+        <div class="label-address">
+          <span class="street">Qeqertanut 1, 3900 Nuuk</span>
+          <span class="phone">Telefon 320333</span>
+        </div>
+      </div>
+
+      <div class="label-body">
+        <div class="label-name">${navn || '—'}</div>
+
+        <div class="label-row">
+          <span class="lbl">Rekvisition:</span>
+          <span>${rekv || '—'}</span>
+        </div>
+
+        <div class="label-boxnum" contenteditable="true" spellcheck="false">${kassNr ? kassNr + '&nbsp;UD AF&nbsp;' + kassTotal : ''}</div>
+      </div>
+    `;
+    return div;
+  }
+
+  /* ── Generate ─────────────────────────────────────────── */
+  function generateLabels() {
+    const navn  = val('inp-navn');
+    const rekv  = val('inp-rekv');
+    const book  = val('inp-book');
+    const dest  = val('inp-dest');
+    const antalRaw = document.getElementById('inp-antal').value.trim();
+    const antal = antalRaw === '' ? 0 : parseInt(antalRaw, 10);
+
+    if (antalRaw !== '' && (isNaN(antal) || antal < 1)) {
+      alert('Antal kasser skal være mindst 1, eller lad feltet stå tomt.');
+      return false;
+    }
+    if (antal > 100) {
+      alert('Maks 100 kasser pr. generering.');
+      return false;
+    }
+
+    const color = destColor(dest);
+    const area  = document.getElementById('label-area');
+    area.innerHTML = '';               // clear previous
+
+    if (antal === 0) {
+      /* Ingen antal angivet -> 2 labels med tomt kasse-felt (skriv selv) */
+      area.appendChild(buildLabel(navn, rekv, book, dest, null, null, color));
+      area.appendChild(buildLabel(navn, rekv, book, dest, null, null, color));
+    } else {
+      for (let i = 1; i <= antal; i++) {
+        area.appendChild(buildLabel(navn, rekv, book, dest, i, antal, color));
+        area.appendChild(buildLabel(navn, rekv, book, dest, i, antal, color));
+      }
+    }
+
+    return true;
+  }
+
+  /* ── Print ────────────────────────────────────────────── */
+  document.getElementById('btn-print').addEventListener('click', () => {
+    if (!generateLabels()) return;
+    window.print();
+  });
+
+  /* ── PDF download ────────────────────────────────────── */
+  document.getElementById('btn-pdf').addEventListener('click', async () => {
+    if (!generateLabels()) return;
+
+    const btn = document.getElementById('btn-pdf');
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = 'Genererer PDF...';
+
+    try {
+      await exportLabelsToPdf();
+    } catch (err) {
+      console.error(err);
+      alert('Der opstod en fejl under PDF-generering. Prøv igen.');
+    } finally {
+      btn.textContent = oldText;
+      btn.disabled = false;
+    }
+  });
+
+  /* ── Clear ────────────────────────────────────────────── */
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    ['inp-navn','inp-rekv','inp-book','inp-dest','inp-antal'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    const area = document.getElementById('label-area');
+    area.innerHTML = '';
+  });
+
+  /* ── Live update on Enter key ─────────────────────────── */
+  document.getElementById('inp-antal').addEventListener('keydown', e => {
+    if (e.key === 'Enter') generateLabels();
+  });
+</script>
+</body>
+</html>

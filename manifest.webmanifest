@@ -1,0 +1,18 @@
+{
+  "name": "Flyttegods Label Maskine",
+  "short_name": "Label Maskine",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#1b3a6b",
+  "lang": "da",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
