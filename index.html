@@ -786,7 +786,7 @@
     }
 
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
 
     const pageW = 210;
     const pageH = 297;
@@ -829,15 +829,15 @@
         const y = startY + row * (cellH + gapY);
 
         const canvas = await html2canvas(labels[i], {
-          scale: 2,
+          scale: 1.5,
           allowTaint: true,
           backgroundColor: '#ffffff',
           logging: false,
           useCORS: false
         });
 
-        const imgData = canvas.toDataURL('image/png');
-        pdf.addImage(imgData, 'PNG', x, y, cellW, cellH);
+        const imgData = canvas.toDataURL('image/jpeg', 0.82);
+        pdf.addImage(imgData, 'JPEG', x, y, cellW, cellH, undefined, 'MEDIUM');
       }
 
       const today = new Date().toISOString().slice(0, 10);
