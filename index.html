@@ -665,28 +665,27 @@
   }
 
   function openOutlookDraft() {
-    const navn = val('inp-navn') || 'navn';
+    const navn = (val('inp-navn') || 'navn').replace(/"/g, '');
     const rekv = val('inp-rekv') || 'Rekvisition nr';
     const subject = `${navn} - ${rekv} - Label:`;
 
     const body = [
       `Hej ${navn},`,
       '',
-      'I forbindelse med din flytning er det meget vigtigt, at du udskriver de labels, du har modtaget, og saetter dem fast paa alle dine flyttekasser.',
-      'Labels skal tapes godt fast og placeres synligt paa hver kasse.',
-      'Dette er afgoerende for, at dit gods bliver haandteret korrekt under transporten, og for at undgaa at kasserne bliver sendt til en forkert destination.',
+      'I forbindelse med din flytning vil vi venligst gøre opmærksom på, at det er meget vigtigt, at du udskriver de labels, du har modtaget, og sætter dem på samtlige flyttekasser.',
+      'Labelen skal tapes godt fast og placeres synligt på hver enkelt kasse.',
+      'Korrekt mærkning er afgørende for, at dit gods bliver håndteret rigtigt under transporten, og for at undgå forsinkelser eller fejlsortering til forkert destination.',
       '',
-      'Vi anbefaler derfor:',
+      'Vi anbefaler derfor følgende:',
       '',
-      'At alle kasser er tydeligt maerket med label',
-      'At label placeres, saa den er let at se',
-      'At der bruges tape, saa den ikke falder af under transport',
+      'At alle kasser er tydeligt mærket med label',
+      'At labelen placeres, så den er let at se',
+      'At der anvendes tape, så labelen ikke falder af under transport',
       '',
-      'Manglende eller utydelig maerkning kan medfoere forsinkelser eller fejl i leveringen.',
-      'Har du spoergsmaal, er du altid velkommen til at kontakte os.',
+      'Manglende eller utydelig mærkning kan medføre forsinkelser eller fejl i leveringen.',
+      'Har du spørgsmål, er du altid velkommen til at kontakte os.',
       '',
-      'Med venlig hilsen',
-      '(Outlook indsaetter din personlige signatur her)'
+      'Med venlig hilsen'
     ].join('\n');
 
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
