@@ -667,7 +667,7 @@
   function openOutlookDraft() {
     const navn = (val('inp-navn') || 'navn').replace(/"/g, '');
     const rekv = val('inp-rekv') || 'Rekvisition nr';
-    const subject = `${navn} - ${rekv} - Label:`;
+    const subject = `${navn} - ${rekv} - Label`;
 
     const body = [
       `Hej ${navn},`,
@@ -679,17 +679,45 @@
       'Vi anbefaler derfor følgende:',
       '',
       'At alle kasser er tydeligt mærket med label',
+      'At hver kasse har 2 labels, én i hver ende af kassen, så de altid er synlige',
       'At labelen placeres, så den er let at se',
       'At der anvendes tape, så labelen ikke falder af under transport',
       '',
       'Manglende eller utydelig mærkning kan medføre forsinkelser eller fejl i leveringen.',
       'Har du spørgsmål, er du altid velkommen til at kontakte os.',
       '',
+      'Husk at vedhæfte den genererede label-PDF i denne mail, inden den sendes.',
+      '',
       'Med venlig hilsen'
     ].join('\n');
 
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
+  }
+
+  async function sendMailWithPdf() {
+    if (!generateLabels()) return;
+
+    const btnMail = document.getElementById('btn-mail');
+    const btnPdf = document.getElementById('btn-pdf');
+    const oldMailText = btnMail.textContent;
+
+    btnMail.disabled = true;
+    btnPdf.disabled = true;
+    btnMail.textContent = 'Genererer PDF...';
+
+    try {
+      const ok = await exportLabelsToPdf();
+      if (!ok) return;
+      openOutlookDraft();
+    } catch (err) {
+      console.error(err);
+      alert('Der opstod en fejl under PDF-generering. Prøv igen.');
+    } finally {
+      btnMail.textContent = oldMailText;
+      btnMail.disabled = false;
+      btnPdf.disabled = false;
+    }
   }
 
   async function exportLabelsToPdf() {
@@ -840,8 +868,8 @@
   }
 
   /* ── Send mail ────────────────────────────────────────── */
-  document.getElementById('btn-mail').addEventListener('click', () => {
-    openOutlookDraft();
+  document.getElementById('btn-mail').addEventListener('click', async () => {
+    await sendMailWithPdf();
   });
 
   /* ── PDF download ────────────────────────────────────── */
