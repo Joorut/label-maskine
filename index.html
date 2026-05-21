@@ -80,9 +80,8 @@
     #btn-generate { background: #1b3a6b; color: #fff; }
     #btn-generate:hover { filter: brightness(1.15); }
 
-    #btn-print { background: #2e7d32; color: #fff; }
-    #btn-print:hover { filter: brightness(1.12); }
-    #btn-print:disabled { background: #aaa; cursor: not-allowed; }
+    #btn-mail { background: #2e7d32; color: #fff; }
+    #btn-mail:hover { filter: brightness(1.12); }
 
     #btn-pdf { background: #005fa3; color: #fff; }
     #btn-pdf:hover { filter: brightness(1.12); }
@@ -488,7 +487,7 @@
   </div>
 
   <div class="btn-row">
-    <button id="btn-print">&#128424; Udskriv alle</button>
+    <button id="btn-mail">&#9993; Send mail</button>
     <button id="btn-pdf">&#128196; Download PDF</button>
     <button id="btn-clear">&#10005; Ryd</button>
   </div>
@@ -665,6 +664,35 @@
     return cleaned || 'uden-booking';
   }
 
+  function openOutlookDraft() {
+    const navn = val('inp-navn') || 'navn';
+    const rekv = val('inp-rekv') || 'Rekvisition nr';
+    const subject = `${navn} - ${rekv} - Label:`;
+
+    const body = [
+      `Hej "${navn}",`,
+      '',
+      'I forbindelse med din flytning er det meget vigtigt, at du udskriver de labels, du har modtaget, og saetter dem fast paa alle dine flyttekasser.',
+      'Labels skal tapes godt fast og placeres synligt paa hver kasse.',
+      'Dette er afgoerende for, at dit gods bliver haandteret korrekt under transporten, og for at undgaa at kasserne bliver sendt til en forkert destination.',
+      '',
+      'Vi anbefaler derfor:',
+      '',
+      'At alle kasser er tydeligt maerket med label',
+      'At label placeres, saa den er let at se',
+      'At der bruges tape, saa den ikke falder af under transport',
+      '',
+      'Manglende eller utydelig maerkning kan medfoere forsinkelser eller fejl i leveringen.',
+      'Har du spoergsmaal, er du altid velkommen til at kontakte os.',
+      '',
+      'Med venlig hilsen',
+      '(Outlook indsaetter din personlige signatur her)'
+    ].join('\n');
+
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  }
+
   async function exportLabelsToPdf() {
     if (typeof html2canvas !== 'function' || !window.jspdf || !window.jspdf.jsPDF) {
       alert('PDF-biblioteker blev ikke indlæst. Genindlæs siden og prøv igen.');
@@ -812,10 +840,9 @@
     return true;
   }
 
-  /* ── Print ────────────────────────────────────────────── */
-  document.getElementById('btn-print').addEventListener('click', () => {
-    if (!generateLabels()) return;
-    window.print();
+  /* ── Send mail ────────────────────────────────────────── */
+  document.getElementById('btn-mail').addEventListener('click', () => {
+    openOutlookDraft();
   });
 
   /* ── PDF download ────────────────────────────────────── */
