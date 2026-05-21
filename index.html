@@ -259,6 +259,7 @@
       letter-spacing: .5px;
       line-height: 1.1;
       margin-bottom: 8px;
+      text-align: center;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -332,6 +333,29 @@
       gap: 6mm;
       padding: 0;
       margin: 0;
+    }
+
+    /* Compact layout used by html2canvas during PDF export */
+    body.pdf-mode .label {
+      border: 2pt solid #111;
+    }
+    body.pdf-mode .label-header { padding: 6px 10px 4px; }
+    body.pdf-mode .label-logo { width: 88px; }
+    body.pdf-mode .label-header-left { padding-bottom: 6px; }
+    body.pdf-mode .label-booking-header { font-size: 1.3rem; margin-top: 3px; margin-bottom: 3px; padding-bottom: 4px; }
+    body.pdf-mode .label-address { font-size: .72rem; }
+    body.pdf-mode .label-topbar { height: 22px; min-height: 22px; }
+    body.pdf-mode .label-topbar span { font-size: .7rem; }
+    body.pdf-mode .label-body { padding: 12px 10px 6px; }
+    body.pdf-mode .label-name { font-size: 1rem; margin-bottom: 4px; }
+    body.pdf-mode .label-row { font-size: .82rem; padding-bottom: 2px; margin-bottom: 2px; }
+    body.pdf-mode .label-row .lbl { min-width: 96px; }
+    body.pdf-mode .label-boxnum {
+      font-size: 1.05rem;
+      min-height: 1.8rem;
+      line-height: 1;
+      padding-top: 2px;
+      padding-bottom: 2px;
     }
 
     /* ══════════════════════════════════════════════════════
@@ -624,43 +648,64 @@
 
     const pageW = 210;
     const pageH = 297;
-    const margin = 10;
-    const gapX = 6;
-    const gapY = 8;
-    const cols = 2;
-    const cellW = (pageW - margin * 2 - gapX) / cols;
-    const cellH = cellW * (10 / 15);
-    const rows = Math.floor((pageH - margin * 2 + gapY) / (cellH + gapY));
-    const perPage = Math.max(1, cols * rows);
+    const margin = 8;
+    const gapX = 4;
+    const gapY = 6;
+    const cols = 1;
+    const maxRowsPerPage = 2;
+    const perPage = cols * maxRowsPerPage;
 
-    for (let i = 0; i < labels.length; i++) {
-      if (i > 0 && i % perPage === 0) {
-        pdf.addPage();
+    const usableW = pageW - margin * 2;
+    const usableH = pageH - margin * 2;
+    const aspect = 15 / 10;
+
+    document.body.classList.add('pdf-mode');
+    try {
+      for (let i = 0; i < labels.length; i++) {
+        if (i > 0 && i % perPage === 0) {
+          pdf.addPage();
+        }
+
+        const pageStart = Math.floor(i / perPage) * perPage;
+        const labelsOnPage = Math.min(perPage, labels.length - pageStart);
+        const rowsOnPage = Math.max(1, Math.ceil(labelsOnPage / cols));
+
+        const cellWByWidth = (usableW - gapX * (cols - 1)) / cols;
+        const cellHByHeight = (usableH - gapY * (rowsOnPage - 1)) / rowsOnPage;
+        const cellW = Math.min(cellWByWidth, cellHByHeight * aspect);
+        const cellH = cellW / aspect;
+
+        const gridW = cols * cellW + gapX * (cols - 1);
+        const gridH = rowsOnPage * cellH + gapY * (rowsOnPage - 1);
+        const startX = (pageW - gridW) / 2;
+        const startY = (pageH - gridH) / 2;
+
+        const indexOnPage = i % perPage;
+        const row = Math.floor(indexOnPage / cols);
+        const col = indexOnPage % cols;
+        const x = startX + col * (cellW + gapX);
+        const y = startY + row * (cellH + gapY);
+
+        const canvas = await html2canvas(labels[i], {
+          scale: 2,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          useCORS: false
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        pdf.addImage(imgData, 'PNG', x, y, cellW, cellH);
       }
 
-      const positionIndex = i % perPage;
-      const row = Math.floor(positionIndex / cols);
-      const col = positionIndex % cols;
-      const x = margin + col * (cellW + gapX);
-      const y = margin + row * (cellH + gapY);
-
-      const canvas = await html2canvas(labels[i], {
-        scale: 2,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-        useCORS: false
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', x, y, cellW, cellH);
+      const today = new Date().toISOString().slice(0, 10);
+      const booking = safeFilenamePart(val('inp-book'));
+      const filename = `labels-${booking}-${today}.pdf`;
+      pdf.save(filename);
+      return true;
+    } finally {
+      document.body.classList.remove('pdf-mode');
     }
-
-    const today = new Date().toISOString().slice(0, 10);
-    const booking = safeFilenamePart(val('inp-book'));
-    const filename = `labels-${booking}-${today}.pdf`;
-    pdf.save(filename);
-    return true;
   }
 
   function buildLabel(navn, rekv, book, dest, kassNr, kassTotal, color) {
@@ -691,7 +736,7 @@
           <span>${rekv || '—'}</span>
         </div>
 
-        <div class="label-boxnum" contenteditable="true" spellcheck="false">${kassNr ? kassNr + '&nbsp;UD AF&nbsp;' + kassTotal : ''}</div>
+        <div class="label-boxnum" contenteditable="true" spellcheck="false">${kassNr ? kassNr + '&nbsp;UD AF&nbsp;' + kassTotal : '________ UD AF ________'}</div>
       </div>
     `;
     return div;
@@ -720,7 +765,7 @@
     area.innerHTML = '';               // clear previous
 
     if (antal === 0) {
-      /* Ingen antal angivet -> 2 labels med tomt kasse-felt (skriv selv) */
+      /* Ingen antal angivet -> 2 labels med "__ UD AF __" som redigerbart felt */
       area.appendChild(buildLabel(navn, rekv, book, dest, null, null, color));
       area.appendChild(buildLabel(navn, rekv, book, dest, null, null, color));
     } else {
