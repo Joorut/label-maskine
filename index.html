@@ -333,11 +333,23 @@
       outline: 2px dashed #1b3a6b;
       background: rgba(27,58,107,.06);
     }
-    .label-boxnum:empty::before {
-      content: 'SKRIV KASSENO.';
-      color: #bbb;
-      font-size: 1.4rem;
-      letter-spacing: 1px;
+
+    .label-boxnum-input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      outline: none;
+      text-align: center;
+      color: #111;
+      font: inherit;
+      font-weight: 900;
+      letter-spacing: inherit;
+      line-height: inherit;
+      padding: 0;
+      margin: 0;
+    }
+    .label-boxnum-input::placeholder {
+      color: #888;
     }
 
     /* ── Destination colour map ───────────────────────────── */
@@ -806,6 +818,10 @@
     const div = document.createElement('div');
     div.className = 'label';
 
+    const boxMarkup = kassNr
+      ? `<div class="label-boxnum label-boxnum-static">${kassNr}&nbsp;UD AF&nbsp;${kassTotal}</div>`
+      : `<input class="label-boxnum label-boxnum-input" type="text" spellcheck="false" placeholder="Skriv fx: 1 UD AF 5" aria-label="Kassenummer" />`;
+
     div.innerHTML = `
       <div class="label-topbar" style="background:#1b3a6b">
         <span>${formatDestinationLabel(dest)}</span>
@@ -830,7 +846,7 @@
           <span>${rekv || '—'}</span>
         </div>
 
-        <div class="label-boxnum" contenteditable="true" spellcheck="false">${kassNr ? kassNr + '&nbsp;UD AF&nbsp;' + kassTotal : '________ UD AF ________'}</div>
+        ${boxMarkup}
       </div>
     `;
     return div;
