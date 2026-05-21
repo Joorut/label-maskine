@@ -334,10 +334,28 @@
       background: rgba(27,58,107,.06);
     }
 
+    .label-boxnum-editable {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 4px;
+      min-height: 3.1rem;
+      cursor: default;
+    }
+    .label-boxnum-help {
+      font-size: 0.48em;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      line-height: 1.1;
+      color: rgba(17, 17, 17, 0.45);
+      text-transform: none;
+    }
+
     .label-boxnum-input {
       width: 100%;
-      border: none;
-      background: transparent;
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
       outline: none;
       text-align: center;
       color: #111;
@@ -345,11 +363,16 @@
       font-weight: 900;
       letter-spacing: inherit;
       line-height: inherit;
-      padding: 0;
+      padding: 0 !important;
       margin: 0;
+      appearance: none;
+      -webkit-appearance: none;
     }
     .label-boxnum-input::placeholder {
-      color: #888;
+      color: rgba(17, 17, 17, 0.35);
+      font-size: 1em;
+      letter-spacing: 0.8px;
+      font-weight: 700;
     }
 
     /* ── Destination colour map ───────────────────────────── */
@@ -820,7 +843,7 @@
 
     const boxMarkup = kassNr
       ? `<div class="label-boxnum label-boxnum-static">${kassNr}&nbsp;UD AF&nbsp;${kassTotal}</div>`
-      : `<input class="label-boxnum label-boxnum-input" type="text" spellcheck="false" placeholder="Skriv fx: 1 UD AF 5" aria-label="Kassenummer" />`;
+      : `<div class="label-boxnum label-boxnum-editable"><div class="label-boxnum-help">Udfyld fx: 1 UD AF 5</div><input class="label-boxnum-input" type="text" spellcheck="false" placeholder="_ UD AF _" aria-label="Kassenummer" /></div>`;
 
     div.innerHTML = `
       <div class="label-topbar" style="background:#1b3a6b">
