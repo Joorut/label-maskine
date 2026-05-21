@@ -139,6 +139,39 @@
 
     body.standalone #pwa-install-gate { display: none !important; }
 
+    /* Standalone mode: lock app UI to fixed window-like size */
+    :root {
+      --app-fixed-width: 520px;
+      --app-fixed-height: 720px;
+    }
+
+    html.standalone-root {
+      background: #dfe3ea;
+    }
+
+    body.standalone {
+      width: var(--app-fixed-width);
+      height: var(--app-fixed-height);
+      min-height: var(--app-fixed-height);
+      margin: 0 auto;
+      overflow: hidden;
+      background: #f0f2f5;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+    }
+
+    body.standalone header {
+      padding: 16px 22px;
+    }
+
+    body.standalone .panel {
+      width: calc(var(--app-fixed-width) - 28px);
+      max-width: none;
+      margin: 12px auto;
+      padding: 20px 22px;
+      max-height: calc(var(--app-fixed-height) - 112px);
+      overflow: auto;
+    }
+
     /* ── Label grid (screen) ──────────────────────────────── */
     #label-area {
       display: grid;
@@ -546,6 +579,7 @@
     await registerServiceWorkerWithAutoUpdate();
 
     if (isStandaloneApp()) {
+      document.documentElement.classList.add('standalone-root');
       document.body.classList.add('standalone');
       hideInstallGate();
       return;
