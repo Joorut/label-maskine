@@ -664,6 +664,11 @@
     return cleaned || 'uden-booking';
   }
 
+  function formatDestinationLabel(destination) {
+    const cleaned = (destination || '').trim().replace(/"/g, '');
+    return `TIL ${cleaned || 'DESTINATION UKENDT'}`;
+  }
+
   function openOutlookDraft() {
     const navn = (val('inp-navn') || 'navn').replace(/"/g, '');
     const rekv = val('inp-rekv') || 'Rekvisition nr';
@@ -803,7 +808,7 @@
 
     div.innerHTML = `
       <div class="label-topbar" style="background:#1b3a6b">
-        <span>${dest || 'DESTINATION UKENDT'}</span>
+        <span>${formatDestinationLabel(dest)}</span>
       </div>
 
       <div class="label-header">
